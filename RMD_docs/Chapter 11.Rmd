@@ -1,0 +1,243 @@
+---
+title: "Chapter 11"
+author: "Robert Beelman"
+date: "2026-10-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(stringr)
+library(refinr)
+```
+
+
+### Exercise 1 {-}
+
+For the following regular expression, explain in words what it matches on. Then add test strings to demonstrate that it in fact does match on the pattern you claim it does. Make sure that your test set of strings has several examples that match as well as several that do not. Show at least two examples that return TRUE and two examples that return FALSE. *If you copy the Rmarkdown code for these exercises directly from my source pages, make sure to remove the `eval=FALSE` from the R-chunk headers.*
+
+Here is an example of what a solution might look like.
+
+**q)** This regular expression matches: 
+
+Any string that contains the lower-case letter "a".
+
+```{r, eval=FALSE}
+strings <- c('Adel', 'Mathematics', 'able', 'cheese')
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, 'a') )
+```
+
+Please complete the questions below.
+
+**a)** This regular expression matches:  
+
+This code detects whether or not each string contains 'ab' in that specific order. The detection returns true whether or not the ab is adjacent to each other. However, it returns false if the 'ab' within the string is inversely ordered. Essentially, order matters, but letters in the middle of the key do not matter. Additionally, the detection returns false if the string does not have both characters of the key. Also, capitals do not matter.
+
+```{r}
+strings <- c('Alphabet', "abacus", "bear", "sack")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, 'ab') )
+```
+
+**b)** This regular expression matches:  
+
+Conversly to the problem above, the string detector returns true as long as a string contains at least one of the letters of the key. The detection will only return false if the string does not contain any of the characters in the string. Capitals do not matter here either.
+
+```{r, eval=FALSE}
+strings <- c("Bear", "sack", "look", "fire")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '[ab]') )
+```
+
+**c)** This regular expression matches:  
+
+With strings that start with either 'a' or 'b'.
+
+```{r, eval=FALSE}
+strings <- c('Alphabet', "abacus", "bear", "sack")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '^[ab]') )
+```
+
+**d)** This regular expression matches:  
+
+This key is looking for a number, white space and the letters "aA" in that order. 
+
+```{r, eval=FALSE}
+strings <- c('2 Abear', "2 bear a", "2 a bear", "2a bear")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '\\d+\\s[aA]') )
+```
+
+**e)** This regular expression matches:  
+
+This expression matches with strings that have a digit, and a character from the key, but does not need a space to return true.
+
+```{r, eval=FALSE}
+strings <- c('2 Abear', "2 bear a", "2abear", "2 bear")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '\\d+\\s*[aA]') )
+```
+
+**f)** This regular expression matches:  
+
+Any string
+
+```{r, eval=FALSE}
+strings <- c("a", "22", "a-", "")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '.*') )
+```
+
+**g)** This regular expression matches:  
+
+This returns true when there are two word characters at the start directly followed by "bar'. Everything else in the string is okay.
+
+```{r, eval=FALSE}
+strings <- c("bsbar", "--stbar", 'AAbaraa#', 'sstt')
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '^\\w{2}bar') )
+```
+
+**h)** This regular expression matches:  
+
+strings that contain "foo.bar" exactly or two alphanumeric characters at the start directly followed by "bar'
+
+```{r, eval=FALSE}
+strings <- c("bsbar", "foo.bar", 'Abaraa', "hello foo.sbar")
+data.frame( string = strings ) %>%
+  mutate( result = str_detect(string, '(foo\\.bar)|(^\\w{2}bar)') )
+```
+    
+### Exercise 2 {-}
+
+The following file names were used in a camera trap study. The S number represents the site, P is the plot within a site, C is the camera number within the plot, the first string of numbers is the YearMonthDay and the second string of numbers is the HourMinuteSecond.
+
+```{r}
+file.names <- c( 'S123.P2.C10_20120621_213422.jpg',
+                 'S10.P1.C1_20120622_050148.jpg',
+                 'S187.P2.C2_20120702_023501.jpg')
+```
+
+Produce a data frame with columns corresponding to the `site`, `plot`, `camera`, `year`, `month`, `day`, `hour`, `minute`, and `second` for these three file names. So we want to produce code that will create the data frame:
+    
+```{r, eval=FALSE}
+# Site Plot Camera Year Month Day Hour Minute Second
+# S123   P2    C10 2012    06  21   21     34     22
+# S10   P1     C1 2012    06  22   05     01     48
+# S187   P2     C2 2012    07  02   02     35     01
+```
+
+
+```{r}
+file.names <-
+  str_replace_all(file.names, pattern="_", replacement = ".")
+
+camera_study <-
+  data.frame(Site = str_extract(file.names, '(^S\\d{3})|(^S\\d{2})')) %>%
+  mutate(
+    Plot = str_extract(file.names, '(P\\d)'),
+    Camera = str_extract(file.names, '(C\\d{1,2})')
+  )
+
+dates <- str_match(file.names, "(\\d{4})(\\d{2})(\\d{2})")
+
+camera_study <-
+  camera_study %>%
+  mutate(
+    Year = dates[,2],
+    Month = dates[,3],
+    Day = dates[,4]
+  )
+  
+times <- str_match(file.names, "(\\d{2})(\\d{2})(\\d{2})(\\.jpg)")
+
+camera_study <-
+  camera_study %>%
+  mutate(
+    Hour = times[,2],
+    Minute = times[,3],
+    Second = times[,4]
+  )
+```
+
+
+```{r}
+camera_study
+```
+
+### Exercise 3 {-}
+
+The full text from Lincoln's Gettysburg Address is given below. It has been provided in a form that includes lots of different types of white space. Your goal is to calculate the mean word length of Lincoln's Gettysburg Address! *Note: you may consider 'battle-field' as one word with 11 letters or as two words 'battle' and 'field'. The first option a bit more difficult and technical!*.
+
+```{r}
+Gettysburg <- 'Four score and seven years ago our fathers brought forth on this 
+continent, a new nation, conceived in Liberty, and dedicated to the proposition 
+that all men are created equal. 
+
+Now we are engaged in a great civil war, testing whether that nation, or any 
+nation so conceived and so dedicated, can long endure. We are met on a great 
+battle-field of that war. We have come to dedicate a portion of that field, as 
+a final resting place for those who here gave their lives that that nation might 
+live. It is altogether fitting and proper that we should do this.
+
+But, in a larger sense, we can not dedicate -- we can not consecrate -- we can 
+not hallow -- this ground. The brave men, living and dead, who struggled here, 
+have consecrated it, far above our poor power to add or detract. The world will 
+little note, nor long remember what we say here, but it can never forget what 
+they did here. It is for us the living, rather, to be dedicated here to the 
+unfinished work which they who fought here have thus far so nobly advanced. It 
+is rather for us to be here dedicated to the great task remaining before us -- 
+that from these honored dead we take increased devotion to that cause for which 
+they gave the last full measure of devotion -- that we here highly resolve that 
+these dead shall not have died in vain -- that this nation, under God, shall 
+have a new birth of freedom -- and that government of the people, by the people, 
+for the people, shall not perish from the earth.'
+```
+
+
+```{r}
+Gettysburg <-
+  str_trim(Gettysburg)
+
+Gettysburg <-
+  str_replace_all(Gettysburg, pattern = "\\n", replacement="")
+
+Gettysburg <-
+  str_replace_all(Gettysburg, pattern = "(--\\s)", replacement="")
+
+Gettysburg <-
+  str_split(Gettysburg, " ")
+
+length(Gettysburg[[1]])
+```
+
+
+### Exercise 4 {-}
+
+Variable names in R may be any combination of letters, digits, period, and underscore. However, variables within a data frame may not start with a digit and if they start with a period, they must not be followed by a digit.
+
+```{r}
+strings <- c('foo15', 'Bar', '.resid', '_14s', 
+             '99_Bottles', '.9Arggh', 'Foo!','HIV Rate')
+```
+
+The first four are valid variable names, but the last four are not.
+
+**a)** First write a regular expression that determines if the string starts with a character (upper or lower case) or underscore and then is followed by zero or more numbers, letters, periods or underscores. *Notice below the use of start/end of string markers. This is important so that we don't just match somewhere in the middle of the variable name.*
+
+```{r, eval=FALSE}
+data.frame( string=strings ) %>%
+  mutate( result = str_detect(string, '^([a-zA-Z_][a-zA-Z0-9._]*|[.][a-zA-Z_]*)$' )) 
+```
+
+**b)** Modify your regular expression so that the first group could be either `[a-zA-Z_]` as before or it could be a period followed by letters or an underscore.
+
+
+
+
+
+
+
+

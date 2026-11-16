@@ -1,0 +1,220 @@
+---
+title: "Chapter 12"
+author: "Robert Beelman"
+date: "2026-10-23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(mosaicData)
+```
+
+
+## Exercises  {#Exercises_Dates}
+
+### Exercise 1 {-}
+
+Convert the following to date or date/time objects.
+
+**a)** September 13, 2010.
+
+```{r}
+mdy("September 13, 2010")
+```
+**b)** Sept 13, 2010.
+
+```{r}
+# mdy("Sept 13, 2010")
+```
+
+This code failed because lubridate does not accept the 4 character shorter version of the month.
+
+
+**c)** Sep 13, 2010.
+
+```{r}
+mdy("Sep 13, 2010")
+```
+
+**d)** S 13, 2010. Comment on the month abbreviation needs.
+
+```{r}
+# mdy("S 13, 2010")
+```
+Lubridate does not accept a one letter denotation for the month. If it did then there would be issues with months like June and July or April and August.
+
+**e)** 07-Dec-1941.
+
+```{r}
+dmy("07-Dec-1941")
+```
+
+**f)** 1-5-1998. Comment on why you might be wrong.
+
+For this part, "1-5-1998" could be interpreted as either Janurary 5th, 1998 or May 1st, 1998.
+
+```{r}
+mdy("1-5-1998")
+dmy("1-5-1998")
+```
+
+**g)** 21-5-1998. Comment on why you know you are correct.
+
+21 must denote a day because months are bounded by integers 1-12.
+
+```{r}
+dmy("21-5-1998")
+```
+
+**h)** 2020-May-5 10:30 am
+
+```{r}
+ymd_hm("2020-May-5 10:30 am")
+```
+
+**i)** 2020-May-5 10:30 am PDT (ex Seattle)
+
+```{r}
+ymd_hm("2020-May-5 10:30 am", tz='US/Pacific')
+```
+
+**j)** 2020-May-5 10:30 am AST (ex Puerto Rico)
+
+```{r}
+ymd_hm("2020-May-5 10:30 am", tz = 'America/Puerto_Rico')
+```
+
+
+### Exercise 3 {-}
+
+Suppose you have arranged for a phone call to be at 3 pm on May 8, 2025 at Arizona time. However, the recipient will be in Auckland, NZ. What time will it be there? 
+
+```{r}
+call_az <- mdy_hm("May 8, 2025, 3:00 PM", tz = "US/Arizona")
+call_nz <- with_tz(call_az, tz="Pacific/Auckland")
+call_nz
+```
+
+### Exercise 4 {-}
+
+From this book's [GitHub](https://github.com/BuscagliaR/STA_444_v2/) directory, navigate to the `data-raw` directory and then download the `Pulliam_Airport_Weather_Station.csv` data file. (*There are several weather station files. Make sure you get the correct one!*)  There is a `DATE` column (is it of type `date` when you import the data?) as well as the Maximum and Minimum temperature. For the last 5 years of data included in the file, plot the time series of daily maximum temperature with date on the x-axis. Write your code so that it will work if I update the date set. *Hint: Find the maximum date in the data set and then subtract 5 years. Will there be a difference if you use `dyears(5)` vs `years(5)`? Which seems more appropriate here?*
+
+```{r}
+Pulliam <- read.csv(file = "../data-raw/Pulliam_Airport_Weather_Station.csv")
+```
+
+```{r}
+Pulliam <- 
+  Pulliam %>%
+  mutate(
+    DATE = ymd(DATE)
+  )
+
+max_date <- max(Pulliam$DATE)
+min_date <- max_date - years(5)
+
+Pulliam <-
+  Pulliam %>%
+  filter(DATE >= min_date & DATE <= max_date)
+```
+
+Yes there is a difference. It seems like the dyears() also includes time into the subtraction, while the years() only subtracts the 5 years.
+
+```{r}
+ggplot(Pulliam, aes(x=DATE, y=TMAX)) +
+  geom_point(color= "red") +
+  labs(
+    x = "Date",
+    y= "Max Temperature",
+    title= "Time Series of Max Temperature"
+  )
+
+ggplot(Pulliam, aes(x=DATE, y=TMIN)) +
+  geom_point(color="blue") +
+  labs(
+    x = "Date",
+    y= "Min Temperature",
+    title= "Time Series of Min Temperature"
+  )
+```
+
+
+### Exercise 5 {-}
+
+It turns out there is some interesting periodicity regarding the number of births on particular days of the year.
+
+**a)** Using the `mosaicData` package, load the data set `Births78` which records the number of children born on each day in the United States in 1978. Because this problem is intended to show how to calculate the information using the `date`, remove all the columns *except* `date` and `births`.
+
+```{r}
+data(Births78)
+
+Births78 <-
+  Births78 %>%
+  select(date, births) %>%
+  mutate(
+    date = ymd(date)
+  )
+```
+
+
+**b)** Graph the number of `births` vs the `date` with date on the x-axis. What stands out to you? Why do you think we have this trend?
+
+```{r}
+ggplot(Births78, aes(x=date, y=births)) +
+  geom_point() +
+  labs(
+    x= "Date",
+    y= "Births"
+  )
+```
+
+
+**c)** To test your assumption, we need to figure out the what day of the week each observation is. Use `dplyr::mutate` to add a new column named `dow` that is the day of the week (Monday, Tuesday, etc). This calculation will involve some function in the `lubridate` package and the `date` column.
+
+```{r}
+Births78 <-
+  Births78 %>%
+  mutate(
+    dow = wday(date, label=TRUE, abbr=FALSE)
+  )
+```
+
+
+**d)** Plot the data with the point color being determined by the day of the week variable.
+
+```{r}
+ggplot(Births78, aes(x=date, y=births, color=dow)) +
+  geom_point() +
+  labs(
+    x= "Date",
+    y= "Births"
+  )
+```
+
+### Exercise 5 {-}
+
+Convert depart and arrive to date-time objects, each in its own time zone. Hint: lubridate accepts only one tz value at a time.
+
+```{r}
+flights <- tibble(
+  flight    = c("F1", "F2", "F3"),
+  depart    = c("2025-05-08 08:15", "2025-06-12 09:00", "2025-09-20 17:45"),
+  depart_tz = c("US/Arizona", "America/Los_Angeles", "America/Denver"),
+  arrive    = c("2025-05-08 15:05", "2025-06-12 11:40", "2025-09-21 10:50"),
+  arrive_tz = c("America/New_York", "Pacific/Honolulu", "Europe/London")
+)
+```
+
+```{r}
+flights2 <-
+  flights %>%
+  rowwise() %>%
+  mutate(Departures = list(ymd_hm(depart, tz=depart_tz))) %>%
+  mutate(Arrivals = list(ymd_hm(arrive, tz=arrive_tz))) %>%
+  ungroup()
+
+flights2$Departures
+flights2$Arrivals
+```
